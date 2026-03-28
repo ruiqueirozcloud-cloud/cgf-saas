@@ -333,6 +333,11 @@ firebase.initializeApp(FIREBASE_CONFIG);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
+// Processar resultado do redirect do Google
+auth.getRedirectResult().then(result=>{
+  if(result&&result.user) console.log("Login redirect OK");
+}).catch(e=>{console.error("Redirect error:",e.code,e.message);});
+
 let currentUser = null, currentRole = null, snapshots = [], evoChart = null, unsubSnaps = null;
 const COLORS = ["#1A6CF5","#00D4A8","#F5A623","#9B7BF5","#F04545","#20C4F4","#FF8A65","#81C784","#F48FB1"];
 const ST_MAP = {active:"Activo",expired:"Vencido",soon:"Em breve",closed:"Encerrado"};
