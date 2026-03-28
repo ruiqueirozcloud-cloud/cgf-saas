@@ -338,6 +338,7 @@ tfoot td.mono{font-family:"JetBrains Mono",monospace}tfoot td.r{text-align:right
           <button class="btn-p" onclick="saveSnap('priv')" id="priv-bsave">💾 Guardar</button>
           <button class="btn-s" onclick="fillLast('priv')">↩ Preencher do último</button>
           <button class="btn-s" style="font-size:12px" onclick="addCdt('priv')">+ Novo CDT</button>
+          <label class="btn-s" style="font-size:12px;cursor:pointer">📥 Importar JSON<input type="file" accept=".json" style="display:none" onchange="importSnapJSON(event)"></label>
           <button class="btn-s" style="font-size:12px" onclick="goTab('priv','bbva')">← Dashboard</button>
         </div>
       </div>
@@ -965,6 +966,48 @@ function applyResults(){
     closeImageModal();
     toast("✅ Formulário preenchido pela IA — verifica e guarda!","ok");
   },400);
+}
+
+
+// ── IMPORT SNAPSHOT JSON ──────────────
+function importSnapJSON(e){
+  const file=e.target.files[0];if(!file)return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    try{
+      const d=JSON.parse(ev.target.result);
+      if(!d.cdts)throw new Error("Formato inválido — falta campo 'cdts'");
+      // Fill date and label
+      if(d.date)document.getElementById("priv-rdate").value=d.date;
+      if(d.label)document.getElementById("priv-rlabel").value=d.label;
+      if(d.notes)document.getElementById("priv-rnotes").value=d.notes;
+      if(d.ahorro)document.getElementById("priv-rahorro").value=d.ahorro;
+      // For each CDT in JSON, update or add input fields
+      d.cdts.forEach(c=>{
+        const id=c.ref.replace("·","");
+        let ve=document.getElementById("cv_"+id);
+        let se=document.getElementById("cs_"+id);
+        if(!ve){
+          // CDT not in form yet — add it
+          const opts=["active","soon","expired","closed"].map(x=>`<option value="${x}">${{active:"Activo",soon:"Em breve",expired:"Vencido",closed:"Encerrado"}[x]}</option>`).join("");
+          const snaps=state.priv.snaps;
+          const prev=snaps.length?snaps[snaps.length-1].cdts.find(x=>x.ref===c.ref):null;
+          const venc=c.vencimento||prev?.vencimento||"";
+          document.getElementById("priv-cdtinputs").insertAdjacentHTML("beforeend",
+            `<div class="ccard"><div style="display:flex;justify-content:space-between;align-items:center"><span class="cref2">CDT ${c.ref}</span><span class="cven">${venc}</span></div><div class="crow"><input type="number" class="cinp" id="cv_${id}" value="0" placeholder="0" data-venc="${venc}" data-ref="${c.ref}"><select class="csel" id="cs_${id}">${opts}</select></div></div>`
+          );
+          ve=document.getElementById("cv_"+id);
+          se=document.getElementById("cs_"+id);
+        }
+        if(ve)ve.value=c.status==="closed"?0:c.valor;
+        if(se)se.value=c.status;
+      });
+      toast(`✅ JSON importado — ${d.cdts.length} CDTs preenchidos`,"ok");
+      // Reset file input
+      e.target.value="";
+    }catch(err){toast("Erro ao importar: "+err.message,"err");}
+  };
+  r.readAsText(file);
 }
 
 // ── TOAST ─────────────────────────────
