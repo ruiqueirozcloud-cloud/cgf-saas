@@ -202,6 +202,33 @@ tfoot td.mono{font-family:"JetBrains Mono",monospace}tfoot td.r{text-align:right
 .toast.info{background:#0B1828;border:1px solid var(--accent);color:#6AAAF8}
 @keyframes sIn{from{transform:translateX(16px);opacity:0}to{transform:translateX(0);opacity:1}}
 @media(max-width:640px){header{padding:0 16px}.pg{padding:16px}.cards{grid-template-columns:1fr 1fr}.cval{font-size:18px}.unm,.urole{display:none}}
+
+/* ── IMAGE AI MODAL ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:500;padding:20px;}
+.modal{background:var(--card);border:1px solid var(--border);border-radius:16px;width:100%;max-width:640px;max-height:90vh;overflow-y:auto;}
+.modal-header{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.modal-title{font-size:15px;font-weight:700;}
+.modal-body{padding:24px;}
+.modal-footer{padding:16px 24px;border-top:1px solid var(--border);display:flex;gap:12px;justify-content:flex-end;}
+.upload-zone{border:2px dashed var(--border2);border-radius:var(--r2);padding:32px;text-align:center;cursor:pointer;transition:all .2s;background:var(--bg2);}
+.upload-zone:hover{border-color:var(--priv);background:var(--priv-bg);}
+.upload-zone.has-files{border-color:var(--success);background:rgba(0,200,150,.06);}
+.upload-icon{font-size:32px;margin-bottom:12px;}
+.upload-text{font-size:13px;color:var(--text3);}
+.upload-text strong{color:var(--text2);}
+.img-preview{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px;}
+.img-thumb{position:relative;width:100px;height:140px;border-radius:var(--r);overflow:hidden;border:1px solid var(--border);}
+.img-thumb img{width:100%;height:100%;object-fit:cover;}
+.img-thumb .rm{position:absolute;top:4px;right:4px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:50%;width:20px;height:20px;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;}
+.ai-status{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-top:16px;font-size:13px;color:var(--text2);min-height:48px;}
+.ai-status.loading{color:var(--warning);}
+.ai-status.ok{color:var(--success);border-color:rgba(0,200,150,.3);}
+.ai-status.err{color:var(--danger);border-color:rgba(240,69,69,.3);}
+.ai-result{margin-top:16px;}
+.ai-result table{width:100%;font-size:12px;}
+.ai-result thead th{background:var(--card2);padding:8px 12px;}
+.ai-result tbody td{padding:8px 12px;border-bottom:1px solid rgba(28,50,96,.4);}
+.ai-result .val{font-family:"JetBrains Mono",monospace;text-align:right;}
 </style>
 </head>
 <body>
@@ -269,6 +296,7 @@ tfoot td.mono{font-family:"JetBrains Mono",monospace}tfoot td.r{text-align:right
       <div class="sechdr">
         <div class="sectitle">CDTs em Carteira <span class="sbadge" id="priv-sdate">—</span></div>
         <button class="btn-s" style="font-size:11px;padding:6px 12px" onclick="goTab('priv','reg')">✏️ Novo Registo</button>
+        <button class="btn-p" style="font-size:11px;padding:6px 14px;background:var(--priv)" onclick="openImageModal()">📷 Actualizar via Foto IA</button>
       </div>
       <div class="twrap" id="priv-cdttbl"></div>
       <div class="distbox" id="priv-distbox"></div>
@@ -377,6 +405,36 @@ tfoot td.mono{font-family:"JetBrains Mono",monospace}tfoot td.r{text-align:right
         <div class="cfgtitle">📋 Actividade</div>
         <div class="twrap" id="cgf-actlog"></div>
       </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- AI IMAGE MODAL -->
+<div id="imgModal" style="display:none" class="modal-overlay" onclick="if(event.target===this)closeImageModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">📷 Actualizar CDTs via Foto IA</div>
+      <button class="btn-sm" onclick="closeImageModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--text3);margin-bottom:16px;line-height:1.6">
+        Carrega screenshots da app BBVA com os teus CDTs.<br>
+        A IA lê os valores automaticamente e pré-preenche o formulário.
+      </p>
+      <div class="upload-zone" id="uploadZone" onclick="document.getElementById('imgInput').click()" ondrop="handleDrop(event)" ondragover="event.preventDefault()">
+        <div class="upload-icon">📱</div>
+        <div class="upload-text"><strong>Clica para escolher imagens</strong><br>ou arrasta aqui · PNG, JPG · múltiplos ficheiros</div>
+      </div>
+      <input type="file" id="imgInput" accept="image/*" multiple style="display:none" onchange="handleFiles(this.files)">
+      <div class="img-preview" id="imgPreview"></div>
+      <div class="ai-status" id="aiStatus" style="display:none"></div>
+      <div class="ai-result" id="aiResult" style="display:none"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-s" onclick="closeImageModal()">Cancelar</button>
+      <button class="btn-s" id="btnAnalyse" onclick="analyseImages()" style="display:none">🔍 Analisar com IA</button>
+      <button class="btn-p" id="btnApply" onclick="applyResults()" style="display:none;background:var(--priv)">✅ Aplicar ao Formulário</button>
     </div>
   </div>
 </div>
@@ -755,6 +813,158 @@ function goTab(sec,tab){
   document.getElementById(`${sec}-pg-${tab}`).classList.add("active");
   if(sec==="priv"&&tab==="reg")renderSnForm();
   if(tab==="adm")loadAdm(sec);
+}
+
+
+// ── AI IMAGE UPLOAD ─────────────────────
+let uploadedFiles = [];
+let aiExtracted = null;
+
+function openImageModal(){
+  uploadedFiles=[];aiExtracted=null;
+  document.getElementById("imgPreview").innerHTML="";
+  document.getElementById("aiStatus").style.display="none";
+  document.getElementById("aiResult").style.display="none";
+  document.getElementById("btnAnalyse").style.display="none";
+  document.getElementById("btnApply").style.display="none";
+  document.getElementById("uploadZone").className="upload-zone";
+  document.getElementById("imgModal").style.display="flex";
+}
+function closeImageModal(){document.getElementById("imgModal").style.display="none";}
+
+function handleDrop(e){
+  e.preventDefault();handleFiles(e.dataTransfer.files);
+}
+function handleFiles(files){
+  for(const f of files){
+    if(!f.type.startsWith("image/"))continue;
+    uploadedFiles.push(f);
+    const reader=new FileReader();
+    reader.onload=ev=>{
+      const idx=uploadedFiles.indexOf(f);
+      const div=document.createElement("div");div.className="img-thumb";div.id="thumb_"+idx;
+      div.innerHTML=`<img src="${ev.target.result}"><button class="rm" onclick="removeImg(${idx})">✕</button>`;
+      document.getElementById("imgPreview").appendChild(div);
+    };
+    reader.readAsDataURL(f);
+  }
+  if(uploadedFiles.length>0){
+    document.getElementById("uploadZone").className="upload-zone has-files";
+    document.getElementById("btnAnalyse").style.display="block";
+  }
+}
+function removeImg(idx){
+  uploadedFiles.splice(idx,1);
+  const t=document.getElementById("thumb_"+idx);if(t)t.remove();
+  if(uploadedFiles.length===0){
+    document.getElementById("uploadZone").className="upload-zone";
+    document.getElementById("btnAnalyse").style.display="none";
+  }
+}
+
+async function fileToBase64(file){
+  return new Promise((res,rej)=>{
+    const r=new FileReader();
+    r.onload=e=>res(e.target.result.split(",")[1]);
+    r.onerror=rej;r.readAsDataURL(file);
+  });
+}
+
+async function analyseImages(){
+  const btn=document.getElementById("btnAnalyse");
+  btn.disabled=true;btn.textContent="A analisar...";
+  const status=document.getElementById("aiStatus");
+  status.style.display="block";status.className="ai-status loading";
+  status.textContent="🤖 A enviar imagens para a IA... pode demorar alguns segundos.";
+
+  try{
+    // Build content with all images
+    const content=[];
+    for(const f of uploadedFiles){
+      const b64=await fileToBase64(f);
+      content.push({type:"image",source:{type:"base64",media_type:f.type,data:b64}});
+    }
+    content.push({type:"text",text:`Analisa estas imagens da app BBVA Colombia.
+Extrai TODOS os CDTs visíveis com:
+- Referência (ex: ·8778, ·3150, etc.)
+- Data de vencimento (formato YYYY-MM-DD)
+- Valor em pesos colombianos (número inteiro, sem símbolos)
+- Estado: "active" se activo, "expired" se vencido, "soon" se vence em breve, "closed" se encerrado
+
+Também extrai o saldo da conta "Ahorro diario" se visível.
+
+Responde APENAS em JSON, sem texto adicional, no formato:
+{
+  "cdts": [
+    {"ref": "·8778", "vencimento": "2026-03-27", "valor": 15000000, "status": "soon"},
+    ...
+  ],
+  "ahorro": 41474829.72,
+  "data_referencia": "2026-03-28"
+}`});
+
+    const resp=await fetch("https://api.anthropic.com/v1/messages",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        model:"claude-sonnet-4-20250514",
+        max_tokens:1000,
+        messages:[{role:"user",content}]
+      })
+    });
+    const data=await resp.json();
+    const text=data.content?.[0]?.text||"";
+    const clean=text.replace(/```json|```/g,"").trim();
+    aiExtracted=JSON.parse(clean);
+
+    // Show results
+    status.className="ai-status ok";
+    status.textContent=`✅ IA identificou ${aiExtracted.cdts?.length||0} CDTs${aiExtracted.ahorro?` e saldo Ahorro de $ ${(+aiExtracted.ahorro).toLocaleString("es-CO")}`:""}`;
+
+    let rows=aiExtracted.cdts.map(c=>`<tr>
+      <td><span class="ref">CDT ${c.ref}</span></td>
+      <td class="mono">${c.vencimento||"—"}</td>
+      <td class="val">$ ${(+c.valor||0).toLocaleString("es-CO")}</td>
+      <td><span class="st ${c.status}">${{active:"Activo",expired:"Vencido",soon:"Em breve",closed:"Encerrado"}[c.status]||c.status}</span></td>
+    </tr>`).join("");
+    const res=document.getElementById("aiResult");
+    res.style.display="block";
+    res.innerHTML=`<div style="font-size:12px;font-weight:600;color:var(--text3);margin-bottom:8px">RESULTADO DA ANÁLISE — verifica antes de aplicar:</div>
+    <div class="twrap"><table class="ai-result"><thead><tr><th>Referência</th><th>Vencimento</th><th class="r">Valor</th><th>Estado</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    document.getElementById("btnApply").style.display="block";
+
+  }catch(e){
+    status.className="ai-status err";
+    status.textContent="❌ Erro ao analisar: "+e.message;
+    console.error(e);
+  }
+  btn.disabled=false;btn.textContent="🔍 Analisar com IA";
+}
+
+function applyResults(){
+  if(!aiExtracted)return;
+  // Switch to reg tab and fill form
+  goTab("priv","reg");
+  // Wait for form to render
+  setTimeout(()=>{
+    // Set date
+    if(aiExtracted.data_referencia){
+      document.getElementById("priv-rdate").value=aiExtracted.data_referencia;
+    }
+    // Fill CDT values
+    aiExtracted.cdts.forEach(c=>{
+      const id=c.ref.replace("·","");
+      const ve=document.getElementById("cv_"+id),se=document.getElementById("cs_"+id);
+      if(ve){ve.value=c.status==="closed"?0:c.valor;}
+      if(se){se.value=c.status;}
+    });
+    // Fill ahorro
+    if(aiExtracted.ahorro){
+      document.getElementById("priv-rahorro").value=aiExtracted.ahorro;
+    }
+    closeImageModal();
+    toast("✅ Formulário preenchido pela IA — verifica e guarda!","ok");
+  },400);
 }
 
 // ── TOAST ─────────────────────────────
