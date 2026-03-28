@@ -384,10 +384,10 @@ auth.onAuthStateChanged(async user=>{
 
 async function checkAccess(email){
   try{
-    const doc=await db.collection("config").doc("access").get();
+    const doc=await db.collection("access").doc("bbva_cdts").get();
     if(!doc.exists){
       // Bootstrap: primeiro utilizador torna-se admin
-      await db.collection("config").doc("access").set({
+      await db.collection("access").doc("bbva_cdts").set({
         roles:{[email]:"admin"},
         meta:{[email]:{addedAt:firebase.firestore.FieldValue.serverTimestamp(),addedBy:"bootstrap"}}
       });
@@ -617,7 +617,7 @@ async function deleteSnap(id){
 // ── ADMIN ──────────────────────────────────────────────────
 async function loadAdminPanel(){
   try{
-    const doc=await db.collection("config").doc("access").get();
+    const doc=await db.collection("access").doc("bbva_cdts").get();
     const data=doc.exists?doc.data():{roles:{},meta:{}};
     const roles=data.roles||{},meta=data.meta||{};
     const roleLabel={admin:"Admin",editor:"Editor",viewer:"Viewer"};
@@ -637,13 +637,13 @@ async function addUser(){
   const email=document.getElementById("newUserEmail").value.trim().toLowerCase(),role=document.getElementById("newUserRole").value;
   if(!email||!email.includes("@")){toast("Email inválido","err");return;}
   try{
-    const doc=await db.collection("config").doc("access").get();
+    const doc=await db.collection("access").doc("bbva_cdts").get();
     const data=doc.exists?doc.data():{roles:{},meta:{}};
     if(data.roles[email]){toast("Este email já tem acesso","err");return;}
     data.roles[email]=role;
     data.meta=data.meta||{};
     data.meta[email]={addedBy:currentUser.email,addedAt:firebase.firestore.FieldValue.serverTimestamp()};
-    await db.collection("config").doc("access").set(data);
+    await db.collection("access").doc("bbva_cdts").set(data);
     await logActivity("user_added",`${email} adicionado como ${role}`);
     document.getElementById("newUserEmail").value="";
     toast(`${email} adicionado como ${role}`,"ok");loadAdminPanel();
@@ -653,10 +653,10 @@ async function addUser(){
 async function removeUser(email){
   if(!confirm(`Remover acesso de ${email}?`))return;
   try{
-    const doc=await db.collection("config").doc("access").get();
+    const doc=await db.collection("access").doc("bbva_cdts").get();
     const data=doc.data();
     delete data.roles[email];if(data.meta)delete data.meta[email];
-    await db.collection("config").doc("access").set(data);
+    await db.collection("access").doc("bbva_cdts").set(data);
     await logActivity("user_removed",`${email} removido`);
     toast(`${email} removido`,"ok");loadAdminPanel();
   }catch(e){toast("Erro: "+e.message,"err");}
