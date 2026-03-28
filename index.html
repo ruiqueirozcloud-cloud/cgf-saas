@@ -331,6 +331,13 @@ firebase.initializeApp(FB);
 const auth = firebase.auth();
 const db   = firebase.firestore();
 
+// Timeout de segurança — mostra login após 4s se onAuthStateChanged não disparar
+const _loadTO = setTimeout(()=>{
+  document.getElementById("loading").style.display="none";
+  document.getElementById("login").style.display="flex";
+  console.warn("Auth timeout — a mostrar login");
+}, 4000);
+
 let me = null, myRole = null, snaps = [], evoChart = null, unsub = null;
 const COLORS = ["#1A6CF5","#00D4A8","#F5A623","#9B7BF5","#F04545","#20C4F4","#FF8A65","#81C784","#F48FB1"];
 const COP  = n => "$ "+(+n||0).toLocaleString("es-CO",{minimumFractionDigits:0,maximumFractionDigits:0});
@@ -355,6 +362,7 @@ auth.getRedirectResult().then(r=>{
 }).catch(e=>console.error("redirect err:",e.code,e.message));
 
 auth.onAuthStateChanged(async user=>{
+  clearTimeout(_loadTO);
   document.getElementById("loading").style.display="none";
   if(!user){
     document.getElementById("login").style.display="flex";
