@@ -332,6 +332,9 @@ const auth = firebase.auth();
 const db   = firebase.firestore();
 
 // Timeout de segurança — mostra login após 4s se onAuthStateChanged não disparar
+// show login immediately
+document.getElementById("loading").style.display="none";
+document.getElementById("login").style.display="flex";
 const _loadTO = setTimeout(()=>{
   document.getElementById("loading").style.display="none";
   document.getElementById("login").style.display="flex";
